@@ -1,0 +1,97 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage{parskip}
+
+\definecolor{headerblue}{RGB}{30, 90, 160}
+\definecolor{rowgray}{RGB}{240, 240, 240}
+
+\renewcommand{\arraystretch}{1.6}
+
+\title{\textbf{ML Lab Project — Evaluation Rubric}}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{table}[ht]
+\centering
+\caption*{\large\textbf{Deliverable Evaluation Criteria}}
+\vspace{0.5em}
+\renewcommand{\arraystretch}{1.8}
+\begin{tabularx}{\textwidth}{
+  >{\bfseries}p{2.4cm}
+  >{\bfseries}p{2.2cm}
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X
+}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{Deliverable} &
+\textcolor{white}{Criteria} &
+\textcolor{white}{Excellent (Full Marks)} &
+\textcolor{white}{Satisfactory (Partial)} &
+\textcolor{white}{Needs Improvement (Low)} \\
+\midrule
+
+% ── Explanation Video ──────────────────────────────────────────────────────────
+\multirow{4}{*}{\makecell[l]{Explanation\\Video \\ \textit{(5M)}}}
+  & Clarity \& Timing \textit{(2M)}
+  & Concise 60s pitch; clearly outlines problem and solution.
+  & Exceeds time limit or lacks clarity in the approach.
+  & Unclear, poorly paced, or misses core project goals. \\
+\cmidrule(l){2-5}
+\rowcolor{rowgray}
+  & Visual Aids \textit{(3M)}
+  & High-quality slide/infographic that significantly aids understanding.
+  & Slide is present but cluttered or lacks professional finish.
+  & No visual aid provided or irrelevant content. \\
+\midrule
+
+% ── Project Report ─────────────────────────────────────────────────────────────
+\multirow{4}{*}{\makecell[l]{Project\\Report \\ \textit{(5M)}}}
+  & IEEE Formatting \textit{(2M)}
+  & Perfect adherence to the two-column IEEE template; physical copy provided.
+  & Minor formatting errors; physical copy provided.
+  & Failed to use template or no physical copy present. \\
+\cmidrule(l){2-5}
+\rowcolor{rowgray}
+  & Technical Summary \textit{(3M)}
+  & Clear, professional summary of methodology, results, and conclusions.
+  & Summary is descriptive but lacks technical depth or data.
+  & Extremely brief or contains technical inaccuracies. \\
+\midrule
+
+% ── Source Code & Viva ─────────────────────────────────────────────────────────
+\multirow{6}{*}{\makecell[l]{Source Code\\& Viva \\ \textit{(10M)}}}
+  & Data \& Pipeline \textit{(3M)}
+  & Rigorous dataset justification; clean, modular pipeline with valid HPO.
+  & Justification is weak; pipeline is functional but ``spaghetti'' code.
+  & No dataset justification; pipeline is broken or illogical. \\
+\cmidrule(l){2-5}
+\rowcolor{rowgray}
+  & Deployment \& UI \textit{(4M)}
+  & Fully containerized; successfully deployed on Cloud (e.g., Beanstalk) with UI.
+  & Containerized but deployment is local or UI is nonfunctional.
+  & No containerization or deployment; CLI only. \\
+\cmidrule(l){2-5}
+  & Viva \& Selection Logic \textit{(3M)}
+  & Explicit, logical criteria for model selection; confident technical viva.
+  & Logic for model selection is vague; average viva performance.
+  & Cannot explain model choice or fails technical questions. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}

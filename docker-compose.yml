@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  water-potability:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+    environment:
+      - PYTHONUNBUFFERED=1

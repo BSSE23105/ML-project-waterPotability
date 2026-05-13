@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Water Potability Classifier — Predict if water is safe to drink from chemical sensor readings using Machine Learning.">
+    <title>Water Potability Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --border: #475569;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 300;
+        }
+
+        .model-badge {
+            display: inline-block;
+            margin-top: 0.75rem;
+            padding: 0.3rem 0.8rem;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 720px;
+            padding: 2rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group label span {
+            font-weight: 300;
+            font-size: 0.7rem;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #64748b;
+        }
+
+        .form-group input {
+            padding: 0.7rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .btn-predict {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-predict:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-predict:active {
+            transform: translateY(0);
+        }
+
+        .btn-predict:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Result display */
+        #result-container {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        #result-container.potable {
+            display: block;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        #result-container.not-potable {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .result-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .result-confidence {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .result-details {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .detail-item {
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.15);
+            border-radius: 6px;
+        }
+
+        .detail-item .label {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .detail-item .value {
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .error-msg {
+            color: var(--accent-red);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>💧 Water Potability Classifier</h1>
+        <p class="subtitle">Enter chemical sensor readings to check if water is safe to drink</p>
+        <span class="model-badge">Model: {{ model_name }} · AUC: {{ "%.4f"|format(model_auc) }}</span>
+    </header>
+
+    <div class="card">
+        <form id="predict-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>pH <span>(0–14)</span></label>
+                    <input type="number" step="any" id="ph" name="ph" placeholder="e.g. 7.5" required>
+                </div>
+                <div class="form-group">
+                    <label>Hardness <span>(mg/L)</span></label>
+                    <input type="number" step="any" id="Hardness" name="Hardness" placeholder="e.g. 200" required>
+                </div>
+                <div class="form-group">
+                    <label>Solids (TDS) <span>(mg/L)</span></label>
+                    <input type="number" step="any" id="Solids" name="Solids" placeholder="e.g. 20000" required>
+                </div>
+                <div class="form-group">
+                    <label>Chloramines <span>(mg/L)</span></label>
+                    <input type="number" step="any" id="Chloramines" name="Chloramines" placeholder="e.g. 7.0" required>
+                </div>
+                <div class="form-group">
+                    <label>Sulfate <span>(mg/L)</span></label>
+                    <input type="number" step="any" id="Sulfate" name="Sulfate" placeholder="e.g. 330" required>
+                </div>
+                <div class="form-group">
+                    <label>Conductivity <span>(µS/cm)</span></label>
+                    <input type="number" step="any" id="Conductivity" name="Conductivity" placeholder="e.g. 420" required>
+                </div>
+                <div class="form-group">
+                    <label>Organic Carbon <span>(mg/L)</span></label>
+                    <input type="number" step="any" id="Organic_carbon" name="Organic_carbon" placeholder="e.g. 14" required>
+                </div>
+                <div class="form-group">
+                    <label>Trihalomethanes <span>(ppm)</span></label>
+                    <input type="number" step="any" id="Trihalomethanes" name="Trihalomethanes" placeholder="e.g. 66" required>
+                </div>
+                <div class="form-group">
+                    <label>Turbidity <span>(NTU)</span></label>
+                    <input type="number" step="any" id="Turbidity" name="Turbidity" placeholder="e.g. 4.0" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-predict" id="btn-predict">
+                🔬 Analyze Water Sample
+            </button>
+            <p id="error-msg" class="error-msg" style="display:none;"></p>
+        </form>
+
+        <div id="result-container">
+            <div style="text-align:center;">
+                <div class="result-icon" id="result-icon"></div>
+                <div class="result-label" id="result-label"></div>
+                <div class="result-confidence" id="result-confidence"></div>
+            </div>
+            <div class="result-details" id="result-details"></div>
+        </div>
+    </div>
+
+    <footer>
+        Water Potability Classifier &bull; Machine Learning Lab Project &bull; Powered by FastAPI
+    </footer>
+
+    <script>
+        const form = document.getElementById('predict-form');
+        const btn = document.getElementById('btn-predict');
+        const resultContainer = document.getElementById('result-container');
+        const errorMsg = document.getElementById('error-msg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            resultContainer.className = '';
+            resultContainer.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((val, key) => { data[key] = parseFloat(val); });
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const json = await res.json();
+
+                if (json.error) {
+                    errorMsg.textContent = 'Error: ' + json.error;
+                    errorMsg.style.display = 'block';
+                } else {
+                    const isPotable = json.prediction === 1;
+                    resultContainer.className = isPotable ? 'potable' : 'not-potable';
+                    resultContainer.style.display = 'block';
+
+                    document.getElementById('result-icon').textContent = isPotable ? 'SAFE' : 'UNSAFE';
+                    document.getElementById('result-label').textContent = json.result;
+                    document.getElementById('result-label').style.color = isPotable ? '#10b981' : '#ef4444';
+                    document.getElementById('result-confidence').textContent =
+                        'Confidence: ' + json.confidence + '%';
+
+                    const details = document.getElementById('result-details');
+                    details.innerHTML = '<div class="detail-item">' +
+                        '<div class="label">Probability Potable</div>' +
+                        '<div class="value">' + json.probability_potable + '%</div>' +
+                        '</div>' +
+                        '<div class="detail-item">' +
+                        '<div class="label">Prediction Class</div>' +
+                        '<div class="value">' + (json.prediction === 1 ? 'Class 1 (Safe)' : 'Class 0 (Unsafe)') + '</div>' +
+                        '</div>';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Network error: ' + err.message;
+                errorMsg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze Water Sample';
+            }
+        });
+    </script>
+</body>
+</html>

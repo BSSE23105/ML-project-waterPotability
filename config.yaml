@@ -1,0 +1,39 @@
+# Water Potability Classifier — Configuration
+# All hyperparameters and paths are externalized here (Lecture 12)
+
+seed: 42
+test_size: 0.2
+cv_folds: 5
+optuna_trials: 50
+
+paths:
+  data: "water_potability.csv"
+  model_dir: "artifacts/models"
+  plot_dir: "artifacts/plots"
+  metrics_dir: "artifacts/metrics"
+
+# Optuna search spaces per model
+search_spaces:
+  logistic_regression:
+    C: [0.001, 100.0]  # log scale
+    solver: ["lbfgs", "liblinear"]
+
+  svm:
+    C: [0.01, 50.0]  # log scale
+    gamma: ["scale", "auto", 0.001, 0.01, 0.1, 1.0]
+    kernel: ["rbf"]
+
+  decision_tree:
+    max_depth: [2, 20]
+    min_samples_split: [5, 50]
+    min_samples_leaf: [2, 30]
+    ccp_alpha: [0.0, 0.05]
+    criterion: ["gini", "entropy"]
+
+  random_forest:
+    n_estimators: [100, 400]
+    max_depth: [3, 12]
+    min_samples_split: [10, 40]
+    min_samples_leaf: [5, 25]
+    max_features: ["sqrt", "log2"]
+    class_weight: ["balanced", "balanced_subsample"]

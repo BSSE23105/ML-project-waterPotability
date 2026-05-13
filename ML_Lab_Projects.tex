@@ -1,0 +1,162 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{multirow}
+
+\definecolor{headerblue}{RGB}{30, 90, 160}
+\definecolor{rowgray}{RGB}{240, 240, 240}
+\definecolor{accentblue}{RGB}{0, 70, 140}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=accentblue,
+    urlcolor=accentblue
+}
+
+\titleformat{\section}{\large\bfseries\color{accentblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\renewcommand{\arraystretch}{1.5}
+
+\title{%
+  {\Large\bfseries Machine Learning Lab Projects}\\[0.4em]
+  {\normalsize Select One Project Per Group}
+}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+% ── Overview ────────────────────────────────────────────────────────────────────
+\section{Overview}
+
+Each group must select one project from the list below. You are expected to independently find a suitable
+dataset, apply appropriate Machine Learning techniques, and demonstrate a working system at the end of
+the semester.
+
+% ── Available Projects ──────────────────────────────────────────────────────────
+\section{Available Projects}
+
+\begin{table}[ht]
+\centering
+\renewcommand{\arraystretch}{1.7}
+\begin{tabularx}{\textwidth}{
+  >{\centering\bfseries}p{0.6cm}
+  >{\bfseries}p{4.5cm}
+  >{\raggedright\arraybackslash}X
+}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\#} &
+\textcolor{white}{Project Title} &
+\textcolor{white}{Brief Description} \\
+\midrule
+
+1 & Network Intrusion Detection System
+  & Build a smart system that identifies malicious or suspicious network traffic. Explore both supervised
+    and unsupervised ML techniques, and compare their effectiveness in detecting intrusions. \\
+\rowcolor{rowgray}
+2 & Student Performance Prediction
+  & Predict students' final grades using historical academic records, attendance, and personal background
+    data. Apply regression or classification models and analyze which features influence performance
+    the most. \\
+
+3 & Student Dropout Risk Predictor
+  & Develop an early-warning system that flags students likely to drop out before it is too late. Use
+    academic, attendance, and demographic data and ensure your model explains why a student is at risk. \\
+\rowcolor{rowgray}
+4 & CI/CD Build Failure Predictor
+  & Predict whether a software build will fail before it runs, using commit metadata. Expose your model
+    as a REST API that can serve as a pre-build gate in real CI pipelines. \\
+
+5 & Water Potability Classifier
+  & Classify whether a water sample is safe to drink from chemical sensor readings. Identify the most
+    dangerous chemical factors and deploy the model as a public API for real-world use. \\
+\rowcolor{rowgray}
+6 & Hospital Appointment No-Show Predictor
+  & Predict which patients are likely to miss their appointment using demographics, booking info, and
+    reminder data. Identify the strongest behavioral predictors to help design better intervention
+    strategies. \\
+
+7 & Industrial Predictive Maintenance
+  & Predict potential mechanical failures in industrial machinery before they occur using time-series
+    sensor logs. Feature engineering and high recall are key --- a missed failure is costly. \\
+\rowcolor{rowgray}
+8 & Real Estate / Dynamic Pricing Engine
+  & Build a regression model to predict property prices from structural, location, and economic features.
+    Handle skewed distributions, encode categorical variables, and evaluate using RMSE and MAE. \\
+
+9 & Phishing / Spam Detection System
+  & Develop a binary classifier to detect malicious emails or URLs using text and URL features. Apply NLP
+    preprocessing, TF-IDF vectorization, and evaluate with F1-Score. \\
+\rowcolor{rowgray}
+10 & Collaborative Recommender System
+   & Build a movie or book recommendation engine that suggests items based on user ratings. Use matrix
+     factorization or KNN to handle sparse user-item interaction data. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ── Required Steps ──────────────────────────────────────────────────────────────
+\section{Required Steps (All Projects)}
+
+Every group must complete \textbf{all} of the following, regardless of which project they choose:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Find a dataset.
+    \item Apply ML techniques and train a model.
+    \item Find the best possible model with hyperparameter tuning.
+    \item Demo the project in the last lab using FastAPI or a web server.
+\end{itemize}
+
+% ── Demo Schedule ───────────────────────────────────────────────────────────────
+\section{Demo Schedule}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item Live demos will be held in the \textbf{second last lab session} of the semester.
+    \item Each group will be allotted a fixed time slot for demonstration and viva.
+    \item Submit \textbf{one printed report per group} on the day of your demo.
+    \item \textbf{No online report submissions} will be accepted.
+\end{itemize}
+
+% ── Important Policies ──────────────────────────────────────────────────────────
+\section{Important Policies}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.3em]
+    \item \textbf{No extensions} will be granted under any circumstances.
+    \item \textbf{Plagiarism or code copying} will result in zero marks for the entire group.
+\end{itemize}
+
+% ── Marks Distribution ──────────────────────────────────────────────────────────
+\section{Evaluation \& Submission Criteria}
+
+\subsection*{Marks Distribution}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lc}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\textbf{Component}} & \textcolor{white}{\textbf{Marks}} \\
+\midrule
+Live Demo + Viva  & 20 \\
+\rowcolor{rowgray}
+Printed Report    & 10 \\
+\midrule
+\textbf{Total}    & \textbf{30} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
