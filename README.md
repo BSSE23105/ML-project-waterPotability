@@ -1,38 +1,383 @@
-# Water Potability Classifier
+<div align="center">
 
-Machine Learning pipeline to classify whether a water sample is safe to drink based on chemical sensor readings.
+# 💧 Water Potability Classifier
 
-## Quick Start
+**A production-ready ML pipeline to classify whether a water sample is safe to drink**
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3%2B-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+*Analyzes 9 chemical sensor readings — pH, hardness, chloramines, and more — to predict water safety with **81.6% AUC** using an optimized Random Forest model.*
+
+</div>
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Results](#-results)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [Dataset](#-dataset)
+- [ML Pipeline](#-ml-pipeline)
+- [API Reference](#-api-reference)
+- [Deployment](#-deployment)
+- [Key Design Decisions](#-key-design-decisions)
+
+---
+
+## 🔍 Overview
+
+This project solves a **binary classification** problem using real-world chemical sensor data:
+
+| Class | Label | Meaning |
+|:-----:|:-----:|:--------|
+| `0` | Not Potable | ⚠️ Unsafe to drink |
+| `1` | Potable | ✅ Safe to drink |
+
+**Core features of this pipeline:**
+
+- 🔬 **Data preprocessing** — class-conditional median imputation + outlier clipping (no data leakage)
+- ⚖️ **Class imbalance handling** — SMOTEENN resampling inside cross-validation folds
+- 🤖 **4 models compared** — Logistic Regression, SVM, Decision Tree, Random Forest
+- ⚡ **Bayesian HPO** — Optuna with 50 trials per model (5-fold CV)
+- 📊 **Full evaluation suite** — ROC curves, PR curves, confusion matrices, SHAP explainability
+- 🚀 **FastAPI deployment** — REST API + web UI + Docker + AWS Elastic Beanstalk support
+
+---
+
+## 🏆 Results
+
+### Champion Model: Random Forest
+
+The champion was selected by highest **F1(unsafe class)** among non-overfitting models (gap ≤ 0.05).
+
+| Metric | Value | Interpretation |
+|:-------|:-----:|:---------------|
+| **Test AUC** | `0.8163` | Strong ability to distinguish safe from unsafe |
+| **Precision (unsafe)** | `80.78%` | When flagging water as unsafe, correct 81% of the time |
+| **Recall (unsafe)** | `72.50%` | Catches 72.5% of all actually unsafe samples |
+| **Recall (safe)** | `73.05%` | Correctly identifies 73% of safe water |
+| **Overfit Gap** | `0.034` | Well below 0.05 threshold — healthy generalization |
+
+### Full Model Comparison
+
+| Model | CV AUC | Test AUC | Prec(0) | Rec(0) | F1(0) | Gap | Status |
+|:------|:------:|:--------:|:-------:|:------:|:-----:|:---:|:------:|
+| Logistic Regression | 0.4791 | 0.5395 | 0.6347 | 0.5125 | 0.5671 | -0.036 | ✅ OK |
+| SVM (RBF Kernel) | 0.6129 | 0.6190 | 0.6794 | 0.5775 | 0.6243 | 0.077 | ❌ OVERFIT |
+| Decision Tree | 0.7431 | 0.7433 | 0.7515 | 0.6350 | 0.6883 | 0.024 | ✅ OK |
+| **Random Forest** | **0.7613** | **0.8163** | **0.8078** | **0.7250** | **0.7642** | **0.034** | ✅ **CHAMPION** |
+
+### Best Hyperparameters (found by Optuna)
+
+| Parameter | Value | What it controls |
+|:----------|:-----:|:-----------------|
+| `n_estimators` | `364` | Number of trees in the forest |
+| `max_depth` | `10` | Maximum depth per tree (limits complexity) |
+| `min_samples_split` | `15` | Minimum samples required to split a node |
+| `min_samples_leaf` | `6` | Minimum samples per leaf node |
+| `max_features` | `sqrt` | Features considered at each split |
+| `class_weight` | `balanced_subsample` | Cost-sensitive learning per bootstrap sample |
+
+---
+
+## 📁 Project Structure
+
+```
+ML-project-waterPotability/
+│
+├── 📄 water_potability.csv       # Raw dataset (3,276 samples, 9 features)
+├── ⚙️  config.yaml               # All hyperparameter search spaces & paths
+├── 🏋️  train.py                  # Main training orchestrator
+├── 📦 requirements.txt           # Python dependencies
+├── 🐳 Dockerfile                 # Container for deployment
+├── 🐳 docker-compose.yml         # Local Docker orchestration
+├── ☁️  Dockerrun.aws.json         # AWS Elastic Beanstalk config
+│
+├── src/                          # Modular pipeline source code
+│   ├── data.py                   # Data loading, imputation, outlier clipping
+│   ├── models.py                 # Model definitions, Optuna HPO, champion selection
+│   ├── evaluate.py               # Metrics, ROC/PR curves, SHAP analysis
+│   └── utils.py                  # Config loading, seed setting, model I/O
+│
+├── api/                          # FastAPI web service
+│   ├── main.py                   # Endpoints: /predict, /health, /
+│   └── templates/
+│       └── index.html            # Dark-themed web UI form
+│
+└── artifacts/                    # Generated by train.py (auto-created)
+    ├── models/
+    │   ├── champion_model.joblib  # Serialized trained model
+    │   ├── champion_info.json     # Model metadata & metrics
+    │   └── feature_columns.json  # Feature names in correct order
+    ├── plots/
+    │   ├── confusion_matrix_*.png
+    │   ├── roc_curves_comparison.png
+    │   ├── pr_curves_comparison.png
+    │   ├── feature_importance_*.png
+    │   ├── shap_summary.png
+    │   └── shap_bar.png
+    └── metrics/
+        └── metrics_*.json
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- pip
+
+### 1. Clone & Install
 
 ```bash
-# Install dependencies
+git clone https://github.com/your-username/ML-project-waterPotability.git
+cd ML-project-waterPotability
+
 pip install -r requirements.txt
+```
 
-# Train all models
+> **Windows (PowerShell)?** See [`Steps-to-run.md`](Steps-to-run.md) for a full venv setup guide.
+
+### 2. Train All Models
+
+```bash
 python train.py
+```
 
-# Run API locally
+This will:
+1. Preprocess the dataset (impute missing values, clip outliers)
+2. Run Optuna HPO for all 4 models (≈ 5–15 min depending on hardware)
+3. Evaluate each model and print a comparison table
+4. Select and save the champion model to `artifacts/`
+
+### 3. Launch the API
+
+```bash
 uvicorn api.main:app --reload --port 8000
 ```
 
-## Project Structure
+Then open **http://127.0.0.1:8000** in your browser.
 
-- `src/` — Modular pipeline code (data, features, models, evaluation)
-- `api/` — FastAPI application with web UI
-- `artifacts/` — Saved models, plots, and metrics
-- `train.py` — Main training orchestrator
-- `config.yaml` — All configuration and hyperparameters
+| URL | What you get |
+|:----|:-------------|
+| `http://127.0.0.1:8000` | Web UI — enter chemical readings, get prediction |
+| `http://127.0.0.1:8000/docs` | Auto-generated Swagger API docs |
+| `http://127.0.0.1:8000/health` | Model status and metadata |
 
-## Models
+---
 
-- Logistic Regression
-- SVM (RBF Kernel)
-- Decision Tree
-- Random Forest
+## 📊 Dataset
 
-## Deployment
+| Property | Value |
+|:---------|:------|
+| **Source** | [Kaggle — Water Potability Dataset](https://www.kaggle.com/datasets/adityakadiwal/water-potability) |
+| **File** | `water_potability.csv` |
+| **Samples** | 3,276 water samples |
+| **Features** | 9 chemical readings |
+| **Target** | `Potability` (0 = unsafe, 1 = safe) |
+| **Class split** | 61% Not Potable / 39% Potable (imbalanced) |
+
+### Features
+
+| Feature | Unit | Description |
+|:--------|:----:|:------------|
+| `ph` | 0–14 | Acidity/alkalinity of water |
+| `Hardness` | mg/L | Calcium and magnesium content |
+| `Solids` | mg/L | Total dissolved solids (TDS) |
+| `Chloramines` | mg/L | Disinfectant chemical level |
+| `Sulfate` | mg/L | Sulfate mineral concentration |
+| `Conductivity` | µS/cm | Electrical conductivity |
+| `Organic_carbon` | mg/L | Organic carbon content |
+| `Trihalomethanes` | ppm | Disinfection chemical byproducts |
+| `Turbidity` | NTU | Water cloudiness / clarity |
+
+### Missing Values Handled
+
+| Column | Missing | % |
+|:-------|:-------:|:-:|
+| `ph` | 491 | 15% |
+| `Sulfate` | 781 | 24% |
+| `Trihalomethanes` | 162 | 5% |
+
+Filled using **class-conditional median imputation** — separate medians are computed per class from training data only.
+
+---
+
+## ⚙️ ML Pipeline
+
+```
+Raw CSV (3,276 samples)
+        │
+        ▼
+  train_test_split   ──── stratified by Potability (80/20)
+        │
+   ┌────┴────┐
+   │         │
+ Train      Test
+ (2,620)    (656)
+   │
+   ▼
+fit_imputer()   ◄─── class-conditional medians (TRAIN ONLY)
+fit_clipper()   ◄─── 1st/99th percentile bounds (TRAIN ONLY)
+   │
+   ▼
+Apply to Train & Test ── using only train-fitted stats
+   │
+   ▼
+For each of 4 models:
+   ├── Optuna HPO (50 trials, 5-fold CV on train)
+   ├── ImbPipeline: SMOTEENN → StandardScaler → Model
+   ├── Evaluate on test set
+   └── Save confusion matrix, ROC curve, metrics
+   │
+   ▼
+Champion selection:
+   ├── Reject overfit models (gap > 0.05)
+   └── Pick highest F1(unsafe class)
+   │
+   ▼
+SHAP explainability on champion
+   │
+   ▼
+Save champion_model.joblib → API serves predictions
+```
+
+### Why These Choices?
+
+| Decision | Reason |
+|:---------|:-------|
+| Split **before** preprocessing | Prevents data leakage — test set stays truly unseen |
+| SMOTEENN **inside** ImbPipeline | Applied only during `.fit()`, never on test/prediction data |
+| 50 Optuna trials | Bayesian HPO converges faster than GridSearch; efficient search |
+| Overfit threshold = 0.05 | Strict enough to reject models that memorize training data |
+| Positive class = Unsafe (0) | Safety-critical framing — Recall answers "did we catch all dangerous water?" |
+| 4 models compared | Shows champion was chosen systematically, not assumed |
+
+---
+
+## 🌐 API Reference
+
+### `POST /predict`
+
+Accepts 9 chemical readings, returns a potability prediction.
+
+**Request body:**
+```json
+{
+  "ph": 7.2,
+  "Hardness": 150.0,
+  "Solids": 12000.0,
+  "Chloramines": 6.5,
+  "Sulfate": 250.0,
+  "Conductivity": 400.0,
+  "Organic_carbon": 10.0,
+  "Trihalomethanes": 60.0,
+  "Turbidity": 3.5
+}
+```
+
+**Response:**
+```json
+{
+  "prediction": "Potable",
+  "confidence": 0.83
+}
+```
+
+### Other Endpoints
+
+| Endpoint | Method | Description |
+|:---------|:------:|:------------|
+| `/` | `GET` | Web UI form |
+| `/predict` | `POST` | Classify a water sample |
+| `/health` | `GET` | Model name, version, status |
+| `/docs` | `GET` | Interactive Swagger documentation |
+
+---
+
+## 🐳 Deployment
+
+### Docker (Local)
 
 ```bash
-docker build -t water-potability .
-docker run -p 8000:8000 water-potability
+docker build -t water-potability-api .
+docker run -p 8000:8000 water-potability-api
 ```
+
+### Docker Compose
+
+```bash
+docker-compose up --build
+```
+
+### AWS Elastic Beanstalk
+
+1. Build and push the Docker image to **AWS ECR**
+2. Create an Elastic Beanstalk environment (Docker platform)
+3. Deploy using `Dockerrun.aws.json` pointing to your ECR image URI
+
+---
+
+## 🎯 Key Design Decisions
+
+<details>
+<summary><strong>Why class-conditional imputation?</strong></summary>
+
+If unsafe water has pH ≈ 6.8 and safe water has pH ≈ 7.4, filling all missing pH with a single global median (7.0) blurs the distinction between classes. Computing medians **per class** preserves within-class patterns and avoids introducing artificial noise.
+
+</details>
+
+<details>
+<summary><strong>Why outlier clipping instead of removal?</strong></summary>
+
+Removing outlier rows loses real data. Clipping caps extreme values (e.g., at the 99th percentile) while keeping the sample in the training set — no data is wasted.
+
+</details>
+
+<details>
+<summary><strong>Why SMOTEENN over plain SMOTE?</strong></summary>
+
+SMOTE (Synthetic Minority Over-sampling) creates synthetic Potable samples by interpolating between existing ones, balancing class counts. However, it can introduce noisy boundary samples. SMOTEENN follows SMOTE with **Edited Nearest Neighbors**, which removes ambiguous samples that are surrounded by the opposite class — resulting in cleaner class boundaries.
+
+</details>
+
+<details>
+<summary><strong>Why Optuna over GridSearchCV?</strong></summary>
+
+GridSearch tests every combination — expensive and inefficient. Optuna uses **Bayesian optimization**: each trial learns from all previous results and focuses sampling on the most promising hyperparameter regions. 50 trials finds near-optimal configurations far faster than exhaustive search.
+
+</details>
+
+---
+
+## 📦 Dependencies
+
+| Package | Version | Purpose |
+|:--------|:-------:|:--------|
+| `pandas` | ≥ 2.0 | Data manipulation |
+| `numpy` | ≥ 1.24 | Numerical computing |
+| `scikit-learn` | ≥ 1.3 | ML models, metrics, pipelines |
+| `imbalanced-learn` | ≥ 0.11 | SMOTEENN resampling |
+| `optuna` | ≥ 3.4 | Bayesian hyperparameter optimization |
+| `matplotlib` / `seaborn` | ≥ 3.7 / 0.12 | Visualization |
+| `shap` | latest | Model explainability |
+| `fastapi` | ≥ 0.104 | REST API framework |
+| `uvicorn` | ≥ 0.24 | ASGI server |
+| `joblib` | ≥ 1.3 | Model serialization |
+| `pyyaml` | ≥ 6.0 | Config file parsing |
+
+---
+
+<div align="center">
+
+Made with 🧠 and ☕ | Kaggle Water Potability Dataset
+
+</div>
