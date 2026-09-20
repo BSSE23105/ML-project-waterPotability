@@ -207,6 +207,11 @@
             color: var(--text-secondary);
         }
 
+        .result-notes { margin-top: 1rem; text-align: left; font-size: 0.9rem; }
+        .result-notes h4 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+        .result-notes ul { margin: 0; padding-left: 1.2rem; }
+        .result-notes li { margin-bottom: 0.25rem; }
+
         .result-details {
             margin-top: 1rem;
             display: grid;
@@ -308,6 +313,8 @@
                 <div class="result-confidence" id="result-confidence"></div>
             </div>
             <div class="result-details" id="result-details"></div>
+            <div class="result-notes" id="result-warnings"></div>
+            <div class="result-notes" id="result-reasons"></div>
         </div>
     </div>
 
@@ -320,6 +327,15 @@
         const btn = document.getElementById('btn-predict');
         const resultContainer = document.getElementById('result-container');
         const errorMsg = document.getElementById('error-msg');
+
+        const renderList = (id, title, items, toText, emptyText) => {
+            const list = items || [];
+            let html = emptyText ? '<h4>' + emptyText + '</h4>' : '';
+            if (list.length) {
+                html = '<h4>' + title + '</h4><ul>' + list.map(i => '<li>' + toText(i) + '</li>').join('') + '</ul>';
+            }
+            document.getElementById(id).innerHTML = html;
+        };
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -364,6 +380,12 @@
                         '<div class="label">Prediction Class</div>' +
                         '<div class="value">' + (json.prediction === 1 ? 'Class 1 (Safe)' : 'Class 0 (Unsafe)') + '</div>' +
                         '</div>';
+
+                    renderList('result-warnings', 'Readings outside drinking-water guidelines', json.warnings,
+                        w => '<strong>' + w.feature + '</strong> = ' + w.value + ' (' + w.limit + '): ' + w.message,
+                        'All readings are within drinking-water guidelines');
+                    renderList('result-reasons', 'What drove this verdict (SHAP)', json.reasons,
+                        r => '<strong>' + r.feature + '</strong> = ' + r.value + ' pushed ' + r.direction + ' (' + (r.contribution > 0 ? '+' : '') + r.contribution + ')');
                 }
             } catch (err) {
                 errorMsg.textContent = 'Network error: ' + err.message;

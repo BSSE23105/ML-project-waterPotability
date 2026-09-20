@@ -383,3 +383,28 @@ GridSearch tests every combination — expensive and inefficient. Optuna uses **
 Made with 🧠 and ☕ | Kaggle Water Potability Dataset
 
 </div>
+
+---
+
+## 🧭 Version 2: explanations, batch scoring and history
+
+The API now explains every verdict and keeps a record of it.
+
+| Endpoint | What it does |
+|:--|:--|
+| `POST /predict` | Verdict plus guideline warnings (WHO / EPA ranges) and the three SHAP reasons behind it; `?explain=false` skips SHAP |
+| `POST /predict/batch` | Scores up to 1,000 samples sent as JSON, with a summary (unsafe share, samples with warnings) |
+| `POST /predict/batch/csv` | Same for an uploaded CSV with the nine reading columns; bad rows are reported, not fatal |
+| `POST /explain` | Full SHAP contribution of every reading for one sample |
+| `GET /history`, `GET /history/{id}` | Past predictions, newest first, filterable by result |
+| `GET /history/stats` | Totals, unsafe share, average probability, most common warnings, predictions per day |
+| `DELETE /history` | Clears the store |
+| `GET /model/info` | Model type, tuned parameters, held-out metrics, guideline limits |
+
+History lives in a SQLite file (`artifacts/history.db` by default, override with `WATER_HISTORY_DB`). `train.py` now also prints a mean-|SHAP| ranking of the features on the test set and stores it in `best_model_info.json`.
+
+Run the tests with:
+
+```bash
+pytest -q
+```

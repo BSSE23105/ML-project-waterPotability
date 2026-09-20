@@ -26,6 +26,7 @@ from src.evaluate import (
     plot_confusion_matrix, plot_roc_curves, plot_pr_curves,
     plot_feature_importance, generate_comparison_table,
 )
+from src.explain import PotabilityExplainer
 
 SEP = "#" * 55
 
@@ -196,6 +197,17 @@ def main():
     else:
         print("  Best model does not support feature importances")
 
+    # SHAP view of the same question, measured on the held-out test set
+    try:
+        explainer = PotabilityExplainer(best_pipeline, feature_cols)
+        shap_ranking = explainer.summary(X_test)
+        print(f"\n  {'Rank':<6} {'Feature':<20} {'Mean |SHAP|':<12}")
+        for rank, item in enumerate(shap_ranking, 1):
+            print(f"  {rank:<6} {item['feature']:<20} {item['mean_abs_shap']:.4f}")
+    except Exception as exc:
+        shap_ranking = []
+        print(f"  SHAP summary skipped: {exc}")
+
 
     print(f"\n\n{SEP}")
     print("  Step 8: Saving Artifacts")
@@ -212,6 +224,7 @@ def main():
         "metrics": best_result["metrics"],
         "overfit_gap": best_result["overfit_gap"],
         "feature_columns": feature_cols,
+        "shap_ranking": shap_ranking,
     }
 
     info_path = os.path.join(model_dir, "best_model_info.json")

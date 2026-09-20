@@ -1,100 +1,116 @@
 # Water Potability Prediction API
-# Accepts chemical readings and predicts if water is safe to drink
+# Accepts chemical readings and predicts if water is safe to drink, explains why,
+# scores whole batches, and keeps a history of every verdict
 
 import os
-import json
-import pandas as pd
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+import sys
+
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
-import joblib
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+sys.path.insert(0, ROOT_DIR)
+
+from api.schemas import BatchRequest, BatchResponse, HistoryStats, PredictionResponse, WaterSample  # noqa: E402
+from api.services.history import PredictionHistory  # noqa: E402
+from api.services.predictor import Predictor, parse_csv  # noqa: E402
 
 app = FastAPI(
     title="Water Potability Classifier",
-    description="Predict whether a water sample is safe to drink based on chemical readings.",
+    description="Predict whether a water sample is safe to drink, with guideline warnings, SHAP reasons, batch scoring and history.",
+    version="2.0",
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+MODEL_DIR = os.path.join(ROOT_DIR, "artifacts", "models")
+HISTORY_DB = os.environ.get("WATER_HISTORY_DB", os.path.join(ROOT_DIR, "artifacts", "history.db"))
 
-# Load the trained model and its metadata
-MODEL_DIR = os.path.join(os.path.dirname(BASE_DIR), "artifacts", "models")
-
-# Try new naming first, fall back to old naming for compatibility
-model_file = "best_model.joblib" if os.path.exists(os.path.join(MODEL_DIR, "best_model.joblib")) else "champion_model.joblib"
-info_file = "best_model_info.json" if os.path.exists(os.path.join(MODEL_DIR, "best_model_info.json")) else "champion_info.json"
-
-model = joblib.load(os.path.join(MODEL_DIR, model_file))
-
-with open(os.path.join(MODEL_DIR, "feature_columns.json"), "r") as f:
-    FEATURE_COLUMNS = json.load(f)
-
-with open(os.path.join(MODEL_DIR, info_file), "r") as f:
-    MODEL_INFO = json.load(f)
-
-
-class WaterSample(BaseModel):
-    """The 9 chemical readings we need from the user."""
-    ph: float = Field(..., ge=0, le=14, description="pH value (0-14)")
-    Hardness: float = Field(..., ge=0, description="Hardness (mg/L)")
-    Solids: float = Field(..., ge=0, description="Total Dissolved Solids (mg/L)")
-    Chloramines: float = Field(..., ge=0, description="Chloramines (mg/L)")
-    Sulfate: float = Field(..., ge=0, description="Sulfate (mg/L)")
-    Conductivity: float = Field(..., ge=0, description="Conductivity (uS/cm)")
-    Organic_carbon: float = Field(..., ge=0, description="Organic Carbon (mg/L)")
-    Trihalomethanes: float = Field(..., ge=0, description="Trihalomethanes (ppm)")
-    Turbidity: float = Field(..., ge=0, description="Turbidity (NTU)")
-
-
-def preprocess_input(sample: dict) -> pd.DataFrame:
-    """Puts the input into the correct column order for the model."""
-    df = pd.DataFrame([sample])
-    df = df[FEATURE_COLUMNS]
-    return df
+predictor = Predictor(MODEL_DIR)
+history = PredictionHistory(HISTORY_DB)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Shows the web form where users can enter water readings."""
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "model_name": MODEL_INFO.get("display_name", "Unknown"),
-            "model_auc": MODEL_INFO.get("metrics", {}).get("roc_auc", 0),
-        },
-    )
+    info = predictor.model_info()
+    context = {"model_name": info["display_name"], "model_auc": info["test_auc"] or 0}
+    return templates.TemplateResponse(request=request, name="index.html", context=context)
 
 
-@app.post("/predict")
-async def predict(sample: WaterSample):
-    """Takes in chemical readings and returns whether the water is safe."""
+@app.post("/predict", response_model=PredictionResponse)
+async def predict(sample: WaterSample, explain: bool = Query(True)):
+    """Scores one sample, stores it, and returns the verdict with warnings and reasons."""
+    result = predictor.predict_one(sample.model_dump(), explain=explain)
+    result["id"] = history.add(result, source="api")
+    return result
+
+
+@app.post("/predict/batch", response_model=BatchResponse)
+async def predict_batch(body: BatchRequest):
+    """Scores up to 1000 samples sent as JSON in one call."""
+    samples = [s.model_dump() for s in body.samples]
+    results = predictor.predict_many(samples, explain=body.explain)
+    for result, new_id in zip(results, history.add_many(results, source="batch")):
+        result["id"] = new_id
+    return {"summary": predictor.summarise(results), "results": results}
+
+
+@app.post("/predict/batch/csv", responses={400: {"description": "The file is not a readable CSV with the nine reading columns"}})
+async def predict_batch_csv(file: UploadFile = File(...), explain: bool = Query(True)):
+    """Scores every row of an uploaded CSV that has the nine reading columns."""
     try:
-        sample_dict = sample.model_dump()
-        X = preprocess_input(sample_dict)
+        samples, skipped = parse_csv((await file.read()).decode("utf-8-sig"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not samples:
+        raise HTTPException(status_code=400, detail="No valid rows found in the CSV file")
+    results = predictor.predict_many(samples, explain=explain)
+    for result, new_id in zip(results, history.add_many(results, source="csv")):
+        result["id"] = new_id
+    return {"summary": predictor.summarise(results), "results": results, "skipped_rows": skipped}
 
-        prediction = int(model.predict(X)[0])
-        probability = float(model.predict_proba(X)[0][1])
 
-        result = "Potable" if prediction == 1 else "Not Potable"
-        confidence = probability if prediction == 1 else (1 - probability)
+@app.post("/explain")
+async def explain(sample: WaterSample):
+    """Returns the SHAP contribution of every reading for one sample."""
+    return predictor.breakdown(sample.model_dump())
 
-        return JSONResponse({
-            "prediction": prediction,
-            "result": result,
-            "confidence": round(confidence * 100, 2),
-            "probability_potable": round(probability * 100, 2),
-            "input": sample_dict,
-        })
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/history")
+async def list_history(limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0),
+                       result: str = Query(None, pattern="^(Potable|Not Potable)$")):
+    """Past predictions, newest first."""
+    return {"total": history.count(), "items": history.list(limit=limit, offset=offset, result=result)}
+
+
+@app.get("/history/stats", response_model=HistoryStats)
+async def history_stats():
+    """How many samples were checked, how many were unsafe, and which readings were most often out of range."""
+    return history.stats()
+
+
+@app.get("/history/{prediction_id}", responses={404: {"description": "No prediction with that id"}})
+async def get_prediction(prediction_id: int):
+    record = history.get(prediction_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Prediction {prediction_id} not found")
+    return record
+
+
+@app.delete("/history")
+async def clear_history():
+    return {"deleted": history.clear()}
+
+
+@app.get("/model/info")
+async def model_info():
+    """Which model is serving, its tuned parameters and held-out metrics."""
+    return predictor.model_info()
 
 
 @app.get("/health")
 async def health():
     """Simple health check to verify the API is running."""
-    return {
-        "status": "healthy",
-        "model": MODEL_INFO.get("display_name", "Unknown"),
-    }
+    return {"status": "healthy", "model": predictor.model_info()["display_name"], "predictions_stored": history.count()}
