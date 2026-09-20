@@ -9,7 +9,8 @@ def test_home_page_renders(client):
 
 def test_health_reports_model(client):
     body = client.get("/health").json()
-    assert body["status"] == "healthy" and body["model"]
+    assert body["status"] == "healthy"
+    assert body["model"]
 
 
 def test_predict_returns_reasons_and_stores_history(client, safe_sample):
@@ -17,7 +18,8 @@ def test_predict_returns_reasons_and_stores_history(client, safe_sample):
     assert response.status_code == 200
     body = response.json()
     assert body["result"] in ("Potable", "Not Potable")
-    assert len(body["reasons"]) == 3 and body["warnings"] == []
+    assert len(body["reasons"]) == 3
+    assert body["warnings"] == []
     stored = client.get(f"/history/{body['id']}").json()
     assert stored["inputs"] == safe_sample
 
@@ -71,7 +73,8 @@ def test_explain_breaks_down_every_reading(client, extreme_sample):
 def test_history_listing_and_stats(client, safe_sample):
     client.post("/predict", json=safe_sample)
     listing = client.get("/history?limit=5").json()
-    assert listing["total"] >= 1 and len(listing["items"]) <= 5
+    assert listing["total"] >= 1
+    assert len(listing["items"]) <= 5
     filtered = client.get("/history?result=Not%20Potable").json()
     assert all(item["result"] == "Not Potable" for item in filtered["items"])
     assert client.get("/history?result=Maybe").status_code == 422
@@ -86,7 +89,8 @@ def test_history_missing_id_is_404(client):
 
 def test_model_info_and_clear_history(client):
     info = client.get("/model/info").json()
-    assert len(info["feature_columns"]) == 9 and "guideline_limits" in info
+    assert len(info["feature_columns"]) == 9
+    assert "guideline_limits" in info
     deleted = client.delete("/history").json()["deleted"]
     assert deleted >= 1
     assert client.get("/history/stats").json()["total"] == 0

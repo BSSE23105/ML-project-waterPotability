@@ -29,7 +29,8 @@ def test_guideline_check_passes_a_normal_sample(safe_sample):
 
 def test_guideline_check_catches_low_ph():
     warnings = check_guidelines({"ph": 5.0})
-    assert len(warnings) == 1 and warnings[0]["feature"] == "ph"
+    assert len(warnings) == 1
+    assert warnings[0]["feature"] == "ph"
 
 
 def test_predict_one_returns_verdict_warnings_and_reasons(predictor, extreme_sample):
@@ -91,7 +92,8 @@ def test_parse_csv_reads_valid_rows_and_reports_bad_ones(safe_sample):
     good = ",".join(str(v) for v in safe_sample.values())
     bad = good.replace("7.2", "not-a-number", 1)
     samples, errors = parse_csv(f"{header}\n{good}\n{bad}\n")
-    assert len(samples) == 1 and samples[0]["ph"] == 7.2
+    assert len(samples) == 1
+    assert samples[0]["ph"] == 7.2
     assert errors == [{"row": 3, "error": errors[0]["error"]}]
 
 
@@ -106,7 +108,8 @@ def test_history_add_get_list_stats_and_clear(tmp_path, predictor, safe_sample, 
     ids = store.add_many(results)
     assert ids == [1, 2]
     record = store.get(2)
-    assert record["inputs"] == extreme_sample and len(record["warnings"]) == 9
+    assert record["inputs"] == extreme_sample
+    assert len(record["warnings"]) == 9
     assert store.get(99) is None
     assert [r["id"] for r in store.list()] == [2, 1]
     assert len(store.list(result=results[0]["result"])) >= 1
@@ -114,6 +117,7 @@ def test_history_add_get_list_stats_and_clear(tmp_path, predictor, safe_sample, 
     assert stats["total"] == 2
     assert stats["most_common_warnings"][0]["count"] == 1
     assert stats["predictions_per_day"][0]["count"] == 2
-    assert store.clear() == 2 and store.count() == 0
+    assert store.clear() == 2
+    assert store.count() == 0
     assert store.stats()["unsafe_share"] == 0.0
     store.close()
