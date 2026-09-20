@@ -30,6 +30,7 @@ def client(history_db):
     from api import main
     with TestClient(main.app) as c:
         yield c
+    main.history.close()
 
 
 @pytest.fixture
